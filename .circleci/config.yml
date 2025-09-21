@@ -1,14 +1,38 @@
+
 version: 2.1
 
-jobs:
-  placeholder:
+executors:
+  go-executor:
     docker:
-      - image: cimg/base:stable
+      - image: cimg/go:1.21   # Go runtime
+      - image: postgres:15    # DB sidecar
+        environment:
+          POSTGRES_USER: items_user
+          POSTGRES_PASSWORD: items_pass
+          POSTGRES_DB: items_db
+    working_directory: ~/repo
+
+jobs:
+  test:
+    executor: go-executor
     steps:
-      - run: echo "CircleCI pipeline coming soon"
-      
+      - checkout
+      - run:
+          name: Wait for Postgres
+          command: |
+            for i in `seq 1 10`;
+            do
+              nc -z localhost 5432 && echo "Postgres is up" && exit 0
+              echo "Waiting for Postgres..."
+              sleep 2
+            done
+            echo "Postgres failed to start" && exit 1
+      - run:
+          name: Run Tests
+          command: go test ./...
+
 workflows:
   version: 2
-  placeholder:
+  test-workflow:
     jobs:
-      - placeholder
+      - test
