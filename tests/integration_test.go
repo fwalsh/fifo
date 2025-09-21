@@ -1,18 +1,18 @@
 package tests
 
 import (
-	"bytes"
-	"database/sql"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"testing"
-	"net/http/httptest"
-    "github.com/fwalsh/fifo" 
+    "bytes"
+    "database/sql"
+    "encoding/json"
+    "net/http"
+    "net/http/httptest"
+    "os"
+    "testing"
 
-	_ "github.com/lib/pq"
+    _ "github.com/lib/pq"
+    fifo "github.com/fwalsh/fifo"   // <-- import our app
 )
+
 
 func TestCreateAndListItems(t *testing.T) {
 	// Connect to DB
