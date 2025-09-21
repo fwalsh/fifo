@@ -13,7 +13,7 @@ type Item struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func getItemsHandler(db *sql.DB) http.HandlerFunc {
+func GetItemsHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.Query("SELECT id, name, created_at FROM items ORDER BY id")
 		if err != nil {
@@ -37,7 +37,7 @@ func getItemsHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func createItemHandler(db *sql.DB) http.HandlerFunc {
+func CreateItemHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			Name string `json:"name"`
