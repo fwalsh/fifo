@@ -1,0 +1,14 @@
+version: 2.1
+
+jobs:
+  placeholder:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run: echo "CircleCI pipeline coming soon"
+      
+workflows:
+  version: 2
+  placeholder:
+    jobs:
+      - placeholder
