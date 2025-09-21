@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"net/http/httptest"
+    "github.com/fwalsh/fifo" 
 
 	_ "github.com/lib/pq"
 )
