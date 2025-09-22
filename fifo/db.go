@@ -10,6 +10,7 @@ import (
 )
 
 func InitDB() *sql.DB {
+	host := getEnv("DB_HOST", "localhost")  
 	connStr := fmt.Sprintf(
 		"host=localhost port=5432 user=%s password=%s dbname=%s sslmode=disable",
 		getEnv("DB_USER", "items_user"),
