@@ -3,15 +3,17 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/fwalsh/fifo" // import your own package
 )
 
 func main() {
-	db := initDB()
+	db := fifo.InitDB()
 	defer db.Close()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"message":"welcome to fifo-api"}`)
+		fmt.Fprintf(w, `{"message":"welcome to fifo API"}`)
 	})
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -22,9 +24,9 @@ func main() {
 	http.HandleFunc("/items", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			getItemsHandler(db)(w, r)
+			fifo.GetItemsHandler(db)(w, r)
 		case http.MethodPost:
-			createItemHandler(db)(w, r)
+			fifo.CreateItemHandler(db)(w, r)
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
