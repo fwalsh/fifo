@@ -10,8 +10,7 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
-	fifo "github.com/fwalsh/fifo/fifo" // import the fifo package
-
+	fifo "github.com/fwalsh/fifo/fifo" // updated import path
 )
 
 func TestCreateAndListItems(t *testing.T) {
@@ -51,4 +50,26 @@ func TestCreateAndListItems(t *testing.T) {
 	mux.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("POST /items expected 200, got %d", w.C
+		t.Fatalf("POST /items expected 200, got %d", w.Code)
+	}
+
+	var created map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if created["name"] != "pear" {
+		t.Errorf("expected name pear, got %s", created["name"])
+	}
+
+	// --- Test GET /items ---
+	req = httptest.NewRequest(http.MethodGet, "/items", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /items expected 200, got %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("pear")) {
+		t.Errorf("expected pear in response, got %s", w.Body.String())
+	}
+}
