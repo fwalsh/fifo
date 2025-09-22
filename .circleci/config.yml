@@ -23,7 +23,7 @@ jobs:
           command: |
             sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      # Wait for Postgres to be ready
+      # Wait for Postgres
       - run:
           name: Wait for Postgres
           command: |
@@ -34,7 +34,7 @@ jobs:
             done
             echo "Postgres failed to start" && exit 1
 
-      # Apply migrations
+      # Run DB migration
       - run:
           name: Run DB Migrations
           command: |
@@ -45,21 +45,47 @@ jobs:
           name: Install gotestsum
           command: go install gotest.tools/gotestsum@latest
 
-      # Run tests and collect results
+      # Run tests with gotestsum
       - run:
-          name: Run Tests with gotestsum
+          name: Run Tests
           command: |
             mkdir -p test-results
             $(go env GOPATH)/bin/gotestsum --junitfile test-results/unit-tests.xml ./...
 
-      # Save test results
+      # Save results
       - store_test_results:
           path: test-results
       - store_artifacts:
           path: test-results
 
+  build:
+    docker:
+      - image: cimg/base:stable   # Base image with Docker CLI
+    working_directory: ~/repo
+    steps:
+      - checkout
+
+      # Enable Docker-in-Docker
+      - setup_remote_docker
+
+      # Build app Docker image
+      - run:
+          name: Build Docker Image
+          command: docker build -t fifo-app:latest .
+
+      # Save image as artifact
+      - run:
+          name: Save Docker Image
+          command: docker save fifo-app:latest -o fifo-app.tar
+
+      - store_artifacts:
+          path: fifo-app.tar
+
 workflows:
   version: 2
-  test-workflow:
+  build-and-test:
     jobs:
       - test
+      - build:
+          requires:
+            - test
