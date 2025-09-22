@@ -1,4 +1,4 @@
-package main
+package fifo
 
 import (
 	"database/sql"
@@ -9,7 +9,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func initDB() *sql.DB {
+func InitDB() *sql.DB {
 	connStr := fmt.Sprintf(
 		"host=localhost port=5432 user=%s password=%s dbname=%s sslmode=disable",
 		getEnv("DB_USER", "items_user"),
@@ -36,3 +36,4 @@ func getEnv(key, fallback string) string {
 	}
 	return fallback
 }
+
