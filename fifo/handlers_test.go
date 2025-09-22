@@ -7,19 +7,24 @@ import (
 	"testing"
 )
 
+// Simple test for the /health endpoint style response
 func TestHealthHandler(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	w := httptest.NewRecorder()
-
-	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// Create a dummy handler inline
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
-	}).ServeHTTP(w, req)
+	})
 
+	// Simulate request
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	// Assertions
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", w.Code)
+		t.Fatalf("expected status 200, got %d", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), `"ok"`) {
-		t.Errorf("unexpected body: %s", w.Body.String())
+		t.Errorf("expected body to contain ok, got %s", w.Body.String())
 	}
 }
