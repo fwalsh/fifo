@@ -1,10 +1,9 @@
-
 version: 2.1
 
 executors:
   go-executor:
     docker:
-      - image: cimg/go:1.21   # Go runtime
+      - image: cimg/go:1.21   # Go environment
       - image: postgres:15    # DB sidecar
         environment:
           POSTGRES_USER: items_user
@@ -17,19 +16,47 @@ jobs:
     executor: go-executor
     steps:
       - checkout
+
+      # Install Postgres client
+      - run:
+          name: Install Postgres Client
+          command: |
+            sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # Wait for Postgres to be ready
       - run:
           name: Wait for Postgres
           command: |
-            for i in `seq 1 10`;
-            do
+            for i in `seq 1 10`; do
               nc -z localhost 5432 && echo "Postgres is up" && exit 0
               echo "Waiting for Postgres..."
               sleep 2
             done
             echo "Postgres failed to start" && exit 1
+
+      # Apply migrations
       - run:
-          name: Run Tests
-          command: go test ./...
+          name: Run DB Migrations
+          command: |
+            psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
+
+      # Install gotestsum
+      - run:
+          name: Install gotestsum
+          command: go install gotest.tools/gotestsum@latest
+
+      # Run tests and collect results
+      - run:
+          name: Run Tests with gotestsum
+          command: |
+            mkdir -p test-results
+            $(go env GOPATH)/bin/gotestsum --junitfile test-results/unit-tests.xml ./...
+
+      # Save test results
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
 
 workflows:
   version: 2
