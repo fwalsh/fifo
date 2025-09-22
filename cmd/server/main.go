@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/fwalsh/fifo" // import your own package
+	"github.com/fwalsh/fifo/fifo" // import the library code
 )
 
 func main() {
