@@ -10,7 +10,8 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
-	fifo "github.com/fwalsh/fifo" // import your fifo package
+	fifo "github.com/fwalsh/fifo/fifo" // import the fifo package
+
 )
 
 func TestCreateAndListItems(t *testing.T) {
