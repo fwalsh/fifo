@@ -1,4 +1,4 @@
-package main
+package fifo
 
 import (
 	"database/sql"
@@ -61,3 +61,4 @@ func CreateItemHandler(db *sql.DB) http.HandlerFunc {
 		json.NewEncoder(w).Encode(it)
 	}
 }
+
