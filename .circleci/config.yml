@@ -65,46 +65,44 @@ jobs:
       - store_artifacts:
           path: fifo-app.tar
 
-push-ecr:
-  docker:
-    - image: cimg/aws:2023.01
-  working_directory: ~/repo
-  steps:
-    - checkout
-    - setup_remote_docker
-    - run:
-        name: Debug OIDC Token Claims
-        command: |
-          echo "Raw token payload:"
-          echo "$CIRCLE_OIDC_TOKEN_V2" | cut -d. -f2 | base64 -d || true
-    - run:
-        name: Assume AWS role via OIDC and push image to ECR
-        command: |
-          set -euo pipefail
-          : "${AWS_REGION:=us-west-2}"
-          : "${AWS_ROLE_ARN:?AWS_ROLE_ARN must be set in CircleCI project env vars}"
+  push-ecr:
+    docker:
+      - image: cimg/aws:2023.01
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Debug OIDC Token Claims
+          command: |
+            echo "Raw token payload:"
+            echo "$CIRCLE_OIDC_TOKEN_V2" | cut -d. -f2 | base64 -d || true
+      - run:
+          name: Assume AWS role via OIDC and push image to ECR
+          command: |
+            set -euo pipefail
+            : "${AWS_REGION:=us-west-2}"
+            : "${AWS_ROLE_ARN:?AWS_ROLE_ARN must be set in CircleCI project env vars}"
 
-          echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
-          export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
-          export AWS_ROLE_ARN
-          export AWS_REGION
+            echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
+            export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
+            export AWS_ROLE_ARN
+            export AWS_REGION
 
-          # Verify identity
-          aws sts get-caller-identity
+            # Verify identity
+            aws sts get-caller-identity
 
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REPO_NAME=fifo-app
-          ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            REPO_NAME=fifo-app
+            ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-          aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-          aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
-            aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
+            aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
+              aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
 
-          docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
-          docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
-
-
+            docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
+            docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
 
 workflows:
   version: 2
