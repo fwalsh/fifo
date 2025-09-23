@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -33,14 +34,17 @@ func InitDB() *sql.DB {
 		log.Fatal("failed to connect to db:", err)
 	}
 
-	// Retry loop: try up to 10 times, waiting 3s between attempts
-	for i := 0; i < 10; i++ {
+	// Retry settings: configurable by env
+	maxRetries, _ := strconv.Atoi(getEnv("DB_MAX_RETRIES", "10"))
+	retryDelay, _ := strconv.Atoi(getEnv("DB_RETRY_DELAY", "3")) // seconds
+
+	for i := 0; i < maxRetries; i++ {
 		if err := db.Ping(); err == nil {
 			log.Println("connected to database")
 			return db
 		}
-		log.Println("waiting for database to be ready...")
-		time.Sleep(3 * time.Second)
+		log.Printf("waiting for database... retry %d/%d", i+1, maxRetries)
+		time.Sleep(time.Duration(retryDelay) * time.Second)
 	}
 
 	log.Fatal("could not connect to database after retries")
