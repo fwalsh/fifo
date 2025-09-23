@@ -4,7 +4,7 @@ Testing out some tools and functionalities.
 
 # Items API
 
-A simple Go web service with a Postgres database.  
+A simple Go web service with a Postgres database.    
 Built for demonstrating CircleCI pipelines, Docker, and ECS deployment.  
 
 ## Endpoints
