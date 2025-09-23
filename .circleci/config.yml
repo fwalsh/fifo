@@ -73,33 +73,38 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
+          name: Install jq (for JSON parsing)
+          command: |
+            sudo apt-get update && sudo apt-get install -y jq
+      - run:
+          name: Debug OIDC Token Claims
+          command: |
+            echo "$CIRCLE_OIDC_TOKEN_V2" | \
+              jq -R 'split(".") | .[1] | @base64d | fromjson'
+      - run:
           name: Assume AWS role via OIDC and push image to ECR
           command: |
             set -euo pipefail
-            : "${AWS_REGION:=us-west-2}"   # default region unless set in CircleCI
+            : "${AWS_REGION:=us-west-2}"
             : "${AWS_ROLE_ARN:?AWS_ROLE_ARN must be set in CircleCI project env vars}"
 
-            # Write CircleCI OIDC token to a file
             echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
             export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
             export AWS_ROLE_ARN
             export AWS_REGION
 
-            # Verify we are using the right role
+            # Verify identity
             aws sts get-caller-identity
 
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             REPO_NAME=fifo-app
             ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-            # Authenticate Docker to ECR
             aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            # Ensure repo exists (create if missing)
             aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
               aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
 
-            # Build and push
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
 
