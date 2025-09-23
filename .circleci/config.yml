@@ -14,6 +14,9 @@ executors:
 jobs:
   test:
     executor: go-executor
+    environment:
+      DB_MAX_RETRIES: 5    # fail fast in CI (shorter retries)
+      DB_RETRY_DELAY: 2
     steps:
       - checkout
 
@@ -71,21 +74,4 @@ jobs:
       # Build app Docker image
       - run:
           name: Build Docker Image
-          command: docker build -t fifo-app:latest .
-
-      # Save image as artifact
-      - run:
-          name: Save Docker Image
-          command: docker save fifo-app:latest -o fifo-app.tar
-
-      - store_artifacts:
-          path: fifo-app.tar
-
-workflows:
-  version: 2
-  build-and-test:
-    jobs:
-      - test
-      - build:
-          requires:
-            - test
+          command: docker build
