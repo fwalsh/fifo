@@ -1,11 +1,33 @@
 version: "3.9"
+
 services:
   db:
     image: postgres:15
-    restart: always
+    container_name: fifo-db
     environment:
       POSTGRES_USER: items_user
       POSTGRES_PASSWORD: items_pass
       POSTGRES_DB: items_db
     ports:
       - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    image: fifo-app:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fifo-app
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: items_user
+      DB_PASS: items_pass
+      DB_NAME: items_db
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
