@@ -12,9 +12,9 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d  # <-- auto-run SQL migrations
 
   app:
-    image: fifo-app:local
     build:
       context: .
       dockerfile: Dockerfile
