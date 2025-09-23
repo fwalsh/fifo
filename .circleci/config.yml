@@ -3,8 +3,8 @@ version: 2.1
 executors:
   go-executor:
     docker:
-      - image: cimg/go:1.21   # Go environment
-      - image: postgres:15    # DB sidecar
+      - image: cimg/go:1.21
+      - image: postgres:15
         environment:
           POSTGRES_USER: items_user
           POSTGRES_PASSWORD: items_pass
@@ -15,18 +15,14 @@ jobs:
   test:
     executor: go-executor
     environment:
-      DB_MAX_RETRIES: 5    # fail fast in CI (shorter retries)
+      DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
     steps:
       - checkout
-
-      # Install Postgres client
       - run:
           name: Install Postgres Client
           command: |
             sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      # Wait for Postgres
       - run:
           name: Wait for Postgres
           command: |
@@ -36,26 +32,18 @@ jobs:
               sleep 2
             done
             echo "Postgres failed to start" && exit 1
-
-      # Run DB migration
       - run:
           name: Run DB Migrations
           command: |
             psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
-
-      # Install gotestsum
       - run:
           name: Install gotestsum
           command: go install gotest.tools/gotestsum@latest
-
-      # Run tests with gotestsum
       - run:
           name: Run Tests
           command: |
             mkdir -p test-results
             $(go env GOPATH)/bin/gotestsum --junitfile test-results/unit-tests.xml ./...
-
-      # Save results
       - store_test_results:
           path: test-results
       - store_artifacts:
@@ -63,15 +51,53 @@ jobs:
 
   build:
     docker:
-      - image: cimg/base:stable   # Base image with Docker CLI
+      - image: cimg/base:stable
     working_directory: ~/repo
     steps:
       - checkout
-
-      # Enable Docker-in-Docker
       - setup_remote_docker
-
-      # Build app Docker image
       - run:
           name: Build Docker Image
-          command: docker build
+          command: docker build -t fifo-app:latest .
+      - run:
+          name: Save Docker Image
+          command: docker save fifo-app:latest -o fifo-app.tar
+      - store_artifacts:
+          path: fifo-app.tar
+
+  push-ecr:
+    docker:
+      - image: cimg/aws:2023.01
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Configure AWS ECR
+          command: |
+            AWS_REGION=us-west-2
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            REPO_NAME=fifo-app
+
+            # Authenticate Docker to ECR
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+            # Ensure repo exists
+            aws ecr describe-repositories --repository-names $REPO_NAME --region $AWS_REGION || \
+              aws ecr create-repository --repository-name $REPO_NAME --region $AWS_REGION
+
+            # Build and push image
+            docker build -t $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:latest .
+            docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:latest
+
+workflows:
+  version: 2
+  build-test-and-push:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+      - push-ecr:
+          requires:
+            - build
