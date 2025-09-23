@@ -73,14 +73,10 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Install jq (for JSON parsing)
+          name: Debug OIDC Token Claims (base64 only)
           command: |
-            sudo apt-get update && sudo apt-get install -y jq
-      - run:
-          name: Debug OIDC Token Claims
-          command: |
-            echo "$CIRCLE_OIDC_TOKEN_V2" | \
-              jq -R 'split(".") | .[1] | @base64d | fromjson'
+            # Extract payload (2nd part of JWT), decode from base64
+            echo "$CIRCLE_OIDC_TOKEN_V2" | cut -d. -f2 | base64 -d || true
       - run:
           name: Assume AWS role via OIDC and push image to ECR
           command: |
@@ -107,6 +103,7 @@ jobs:
 
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
+
 
 
 workflows:
