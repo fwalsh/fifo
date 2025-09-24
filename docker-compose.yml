@@ -11,11 +11,25 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  migrate:
+    image: postgres:15
+    depends_on:
+      - db
+    volumes:
+      - ./migrations:/migrations
+    entrypoint: >
+      sh -c "until pg_isready -h db -U items_user;
+             do echo 'Waiting for Postgres...'; sleep 2; done;
+             psql -h db -U items_user -d items_db -f /migrations/0001_create_items.sql"
+    environment:
+      PGPASSWORD: items_pass
+
   app:
     image: 430256233470.dkr.ecr.us-west-2.amazonaws.com/fifo-app:latest
     container_name: fifo-app
     depends_on:
       - db
+      - migrate
     environment:
       DB_HOST: db
       DB_USER: items_user
