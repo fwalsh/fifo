@@ -57,6 +57,19 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
+          name: Skip build on docs-only changes
+          command: |
+            set -euo pipefail
+            base_ref="${CIRCLE_BRANCH:-main}"
+            git fetch origin "$base_ref" --depth=1
+            CHANGED=$(git diff --name-only "$(git merge-base HEAD origin/$base_ref)" HEAD)
+            if echo "$CHANGED" | grep -vE '^(README\.md|docs/)' >/dev/null; then
+              echo "Changes affect build. Continuing."
+            else
+              echo "Docs-only change. Halting build job."
+              circleci step halt
+            fi
+      - run:
           name: Build Docker Image
           command: docker build -t fifo-app:latest .
       - run:
@@ -73,12 +86,7 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Debug OIDC Token Claims
-          command: |
-            echo "Raw token payload:"
-            echo "$CIRCLE_OIDC_TOKEN_V2" | cut -d. -f2 | base64 -d || true
-      - run:
-          name: Assume AWS role via OIDC and push image to ECR
+          name: Configure AWS ECR and Push Image
           command: |
             set -euo pipefail
             : "${AWS_REGION:=us-west-2}"
@@ -86,10 +94,7 @@ jobs:
 
             echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
             export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
-            export AWS_ROLE_ARN
-            export AWS_REGION
 
-            # Verify identity
             aws sts get-caller-identity
 
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -97,9 +102,6 @@ jobs:
             ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
             aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
-
-            aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
-              aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
 
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
@@ -110,8 +112,9 @@ workflows:
     jobs:
       - test
       - build:
-          requires:
-            - test
+          requires: [test]
       - push-ecr:
-          requires:
-            - build
+          requires: [build]
+          filters:
+            branches:
+              only: main
