@@ -118,25 +118,27 @@ jobs:
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
 
 
-
 workflows:
   version: 2
   build-test-and-push:
     jobs:
-      - test:
-          filters:
-            branches:
-              only: main
+      # Run tests on ALL branches
+      - test
+
+      # Only build Docker images on main
       - build:
           requires:
             - test
           filters:
             branches:
               only: main
+
+      # Only push to ECR on main
       - push-ecr:
           requires:
             - build
           filters:
             branches:
               only: main
+
 
