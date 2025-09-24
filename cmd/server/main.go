@@ -1,26 +1,25 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
-	"github.com/fwalsh/fifo/fifo" // import the library code
+	"github.com/fwalsh/fifo/fifo"
 )
 
 func main() {
-	db := fifo.InitDB()
+	// Initialize DB connection
+	db, err := fifo.InitDB()
+	if err != nil {
+		log.Fatalf("failed to connect to db: %v", err)
+	}
 	defer db.Close()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"message":"welcome to fifo API"}`)
-	})
+	// Routes
+	http.HandleFunc("/", fifo.RootHandler(db))        // friendly homepage
+	http.HandleFunc("/health", fifo.HealthHandler)    // health check
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status":"ok"}`)
-	})
-
+	// Unified handler for /items
 	http.HandleFunc("/items", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -28,10 +27,13 @@ func main() {
 		case http.MethodPost:
 			fifo.CreateItemHandler(db)(w, r)
 		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 
-	fmt.Println("server running on :8080")
-	http.ListenAndServe(":8080", nil)
+	// Start server
+	log.Println("🚀 fifo app running on :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }
