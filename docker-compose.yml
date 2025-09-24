@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:15
@@ -12,12 +10,9 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d  # auto-run migrations on first startup
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: 430256233470.dkr.ecr.us-west-2.amazonaws.com/fifo-app:latest
     container_name: fifo-app
     depends_on:
       - db
@@ -26,9 +21,6 @@ services:
       DB_USER: items_user
       DB_PASS: items_pass
       DB_NAME: items_db
-      # Optional retry settings (use defaults if unset)
-      DB_MAX_RETRIES: 20   # try 20 times
-      DB_RETRY_DELAY: 2    # wait 2 seconds between retries
     ports:
       - "8080:8080"
 
