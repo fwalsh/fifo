@@ -83,20 +83,20 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Assume Role via OIDC
+          name: Assume Role and Push Image to ECR
           command: |
             set -euo pipefail
-            echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
 
+            # Assume role with OIDC
+            echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
             export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
             export AWS_ROLE_ARN=$AWS_ROLE_ARN
             export AWS_REGION=${AWS_REGION:-us-west-2}
 
             echo "🔑 Assuming role: $AWS_ROLE_ARN in region $AWS_REGION"
             aws sts get-caller-identity
-      - run:
-          name: Configure AWS ECR
-          command: |
+
+            # Setup ECR info
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             REPO_NAME=fifo-app
             ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -113,9 +113,10 @@ jobs:
                 --repository-name $REPO_NAME \
                 --region $AWS_REGION
 
-            # Build and push image
+            # Build and push Docker image
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
+
 
 
 workflows:
