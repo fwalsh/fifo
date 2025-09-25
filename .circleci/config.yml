@@ -117,16 +117,20 @@ workflows:
             - test
           filters:
             branches:
-              only: main
-            paths:
-              ignore:
-                - "**/*.md"
+              only:
+                - main
+          # docs-only skips
+          # put this at the same level as branches
+          paths:
+            ignore:
+              - "**/*.md"
       - push-ecr:
           requires:
             - build
           filters:
             branches:
-              only: main
-            paths:
-              ignore:
-                - "**/*.md"
+              only:
+                - main
+          paths:
+            ignore:
+              - "**/*.md"
