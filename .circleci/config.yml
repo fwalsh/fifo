@@ -5,16 +5,16 @@ executors:
     docker:
       - image: cimg/go:1.21
       - image: postgres:15
-        environment:
-          POSTGRES_USER: items_user
-          POSTGRES_PASSWORD: items_pass
-          POSTGRES_DB: items_db
     working_directory: ~/repo
 
 jobs:
   test:
     executor: go-executor
     environment:
+      DB_USER: items_user
+      DB_PASS: items_pass
+      DB_NAME: items_db
+      DB_HOST: localhost
       DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
     steps:
@@ -35,7 +35,7 @@ jobs:
       - run:
           name: Run DB Migrations
           command: |
-            psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
+            PGPASSWORD=$DB_PASS psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/0001_create_items.sql
       - run:
           name: Install gotestsum
           command: go install gotest.tools/gotestsum@latest
@@ -56,13 +56,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-      - run:
-          name: Skip docs-only commits
-          command: |
-            if git diff --name-only HEAD^ HEAD | grep -qE '\.md$'; then
-              echo "Docs-only change detected, skipping build."
-              circleci step halt
-            fi
       - run:
           name: Build Docker Image
           command: docker build -t fifo-app:latest .
@@ -119,14 +112,9 @@ workflows:
       - build:
           requires:
             - test
-          filters:
-            branches:
-              only:
-                - main
       - push-ecr:
           requires:
             - build
           filters:
             branches:
-              only:
-                - main
+              only: main
