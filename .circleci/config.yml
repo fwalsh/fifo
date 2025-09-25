@@ -1,7 +1,7 @@
 version: 2.1
 
-jobs:
-  test:
+executors:
+  go-executor:
     docker:
       - image: cimg/go:1.21
       - image: postgres:15
@@ -10,6 +10,10 @@ jobs:
           POSTGRES_PASSWORD: items_pass
           POSTGRES_DB: items_db
     working_directory: ~/repo
+
+jobs:
+  test:
+    executor: go-executor
     environment:
       DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
