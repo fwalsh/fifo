@@ -3,50 +3,31 @@ package fifo
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
-	"strconv"
-	"time"
 
 	_ "github.com/lib/pq"
 )
 
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
+// InitDB initializes and verifies a Postgres connection
+func InitDB() (*sql.DB, error) {
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	pass := os.Getenv("DB_PASS")
+	name := os.Getenv("DB_NAME")
 
-func InitDB() *sql.DB {
-	host := getEnv("DB_HOST", "localhost")
-	user := getEnv("DB_USER", "items_user")
-	pass := getEnv("DB_PASS", "items_pass")
-	dbname := getEnv("DB_NAME", "items_db")
+	// Build DSN (disable SSL for local/dev)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, pass, host, name)
 
-	connStr := fmt.Sprintf(
-		"host=%s port=5432 user=%s password=%s dbname=%s sslmode=disable",
-		host, user, pass, dbname,
-	)
-
-	db, err := sql.Open("postgres", connStr)
+	// Open connection
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("failed to connect to db:", err)
+		return nil, err
 	}
 
-	// Retry settings: configurable by env
-	maxRetries, _ := strconv.Atoi(getEnv("DB_MAX_RETRIES", "10"))
-	retryDelay, _ := strconv.Atoi(getEnv("DB_RETRY_DELAY", "3")) // seconds
-
-	for i := 0; i < maxRetries; i++ {
-		if err := db.Ping(); err == nil {
-			log.Println("connected to database")
-			return db
-		}
-		log.Printf("waiting for database... retry %d/%d", i+1, maxRetries)
-		time.Sleep(time.Duration(retryDelay) * time.Second)
+	// Verify DB is reachable
+	if err := db.Ping(); err != nil {
+		return nil, err
 	}
 
-	log.Fatal("could not connect to database after retries")
-	return nil
+	return db, nil
 }
