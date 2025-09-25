@@ -4,11 +4,12 @@
 
 In this case, it’s also the name of a simple **Items API** written in Go — a simple but complete reference app designed to showcase a modern CI/CD pipeline.  
 
+- The service exposes a few endpoints:
 
-The service exposes a couple of endpoints:  
-- `GET /health` → Health check  
-- `GET /items` → List stored items  
-- `POST /items` → Add a new item (🍎, 🍐, 🍇, 🌀 … you get the idea!)
+- `GET /` → Landing page (with HTML response)  
+- `GET /health` → Health check (JSON: `{"status":"ok"}`)  
+- `GET /items` → List stored items (JSON array)  
+- `POST /items/create` → Add a new item (form or JSON body)
 
 
 Behind the scenes:  
@@ -49,22 +50,39 @@ It’s both a **reference pipeline** and a fun way to show how everything maps t
                            (only on main)
 
 🚀 Running Locally
+
 Make sure you have Docker and docker-compose installed.
 
-bash
-Copy code
-# Clone repo
+Open a terminal (bash/zsh on macOS or Linux, PowerShell on Windows) and run:
+
+# Clone the repo
 git clone https://github.com/fwalsh/fifo.git
 cd fifo
 
-# Start services
+# Start services (database, migrations, and app)
 docker-compose up -d
 
-# Test the app
+
+Once the services are running:
+
+# Health check
 curl http://localhost:8080/health
-curl -X POST http://localhost:8080/items -H "Content-Type: application/json" -d '{"name":"peach"}'
+# -> {"status":"ok"}
+
+# Create an item
+curl -X POST http://localhost:8080/items/create \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "name=peach"
+
+# List items
 curl http://localhost:8080/items
-You’ll see items persisted in Postgres 🎉.
+# -> [{"id":1,"name":"peach","created_at":"..."}]
+
+
+Or open your browser and visit:
+👉 http://localhost:8080/
+
+You’ll see a simple landing page, and you can interact with the API from there.
 
 
 🔄 CI/CD Pipeline
@@ -103,6 +121,8 @@ This ensures quick feedback everywhere while limiting heavier jobs to production
 
 📦 Publishes artifacts to both CircleCI + AWS ECR
 
+🌱 Automatic migrations ensure schema is ready (via `migrate` sidecar)
+
 
 🔮 Future Improvements
 
@@ -118,5 +138,5 @@ Parallelize/conditionalize tests for speedier builds
 👩🏼‍💻 Author
 
 👋 Hi, I’m Fiona. This project was built as part of a CircleCI field engineer challenge.
-If you’d like to chat DevOps tooling, CI/CD, or fun side projects — let’s connect! 🌟
+
 
