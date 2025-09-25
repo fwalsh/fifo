@@ -4,16 +4,18 @@ executors:
   go-executor:
     docker:
       - image: cimg/go:1.21
+    working_directory: ~/repo
+
+jobs:
+  test:
+    docker:
+      - image: cimg/go:1.21
       - image: postgres:15
         environment:
           POSTGRES_USER: items_user
           POSTGRES_PASSWORD: items_pass
           POSTGRES_DB: items_db
     working_directory: ~/repo
-
-jobs:
-  test:
-    executor: go-executor
     environment:
       DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
@@ -35,7 +37,7 @@ jobs:
       - run:
           name: Run DB Migrations
           command: |
-            psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
+            PGPASSWORD=items_pass psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
       - run:
           name: Install gotestsum
           command: go install gotest.tools/gotestsum@latest
