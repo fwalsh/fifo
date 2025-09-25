@@ -4,12 +4,12 @@
 
 In this case, it’s also the name of a simple **Items API** written in Go — a simple but complete reference app designed to showcase a modern CI/CD pipeline.  
 
-- The service exposes a few endpoints:
+The service exposes a few endpoints:
 
-- `GET /` → Landing page (with HTML response)  
+- `GET /` → Friendly landing page (HTML with styled welcome)  
 - `GET /health` → Health check (JSON: `{"status":"ok"}`)  
 - `GET /items` → List stored items (JSON array)  
-- `POST /items/create` → Add a new item (form or JSON body)
+- `POST /items` → Add a new item (accepts JSON or form input)  
 
 
 Behind the scenes:  
@@ -53,7 +53,8 @@ It’s both a **reference pipeline** and a fun way to show how everything maps t
 
 Make sure you have Docker and docker-compose installed.
 
-Open a terminal (bash/zsh on macOS or Linux, PowerShell on Windows) and run:
+Open a terminal (bash/zsh on macOS/Linux, or PowerShell on Windows) and run the following commands:
+
 
 # Clone the repo
 git clone https://github.com/fwalsh/fifo.git
@@ -69,10 +70,12 @@ Once the services are running:
 curl http://localhost:8080/health
 # -> {"status":"ok"}
 
-# Create an item
-curl -X POST http://localhost:8080/items/create \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "name=peach"
+
+# Create an item (JSON)
+curl -X POST http://localhost:8080/items \
+  -H "Content-Type: application/json" \
+  -d '{"name":"peach"}'
+
 
 # List items
 curl http://localhost:8080/items
@@ -116,8 +119,6 @@ This ensures quick feedback everywhere while limiting heavier jobs to production
 🔒 OIDC → AWS: no static credentials
 
 ✂️ Skips unnecessary builds for docs-only changes
-
-🌱 Automatic migrations ensure schema is ready
 
 📦 Publishes artifacts to both CircleCI + AWS ECR
 
