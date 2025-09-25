@@ -25,7 +25,10 @@ services:
       PGPASSWORD: items_pass
 
   app:
-    image: 430256233470.dkr.ecr.us-west-2.amazonaws.com/fifo-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fifo-app:local
     container_name: fifo-app
     depends_on:
       - db
