@@ -3,31 +3,40 @@ package fifo
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
-// InitDB initializes and verifies a Postgres connection
-func InitDB() (*sql.DB, error) {
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	pass := os.Getenv("DB_PASS")
-	name := os.Getenv("DB_NAME")
+// InitDB initializes the Postgres connection and retries if DB is not yet ready.
+func InitDB() *sql.DB {
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbName := os.Getenv("DB_NAME")
+	dbHost := os.Getenv("DB_HOST")
 
-	// Build DSN (disable SSL for local/dev)
-	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable", user, pass, host, name)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
+		dbUser, dbPass, dbHost, dbName)
 
-	// Open connection
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
+	var db *sql.DB
+	var err error
+
+	for i := 0; i < 10; i++ {
+		db, err = sql.Open("postgres", dsn)
+		if err == nil {
+			if pingErr := db.Ping(); pingErr == nil {
+				log.Println("✅ Connected to database")
+				return db
+			} else {
+				err = pingErr
+			}
+		}
+		log.Printf("waiting for database... retry %d/10\n", i+1)
+		time.Sleep(3 * time.Second)
 	}
 
-	// Verify DB is reachable
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	log.Fatalf("❌ Could not connect to database after retries: %v", err)
+	return nil
 }
