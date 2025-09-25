@@ -33,12 +33,9 @@ jobs:
             done
             echo "Postgres failed to start" && exit 1
       - run:
-          name: Debug Postgres Logs
-          command: docker logs $(docker ps -q --filter ancestor=postgres:15) || true
-      - run:
           name: Run DB Migrations
           command: |
-            PGPASSWORD=items_pass psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
+            psql -h localhost -U items_user -d items_db -f migrations/0001_create_items.sql
       - run:
           name: Install gotestsum
           command: go install gotest.tools/gotestsum@latest
@@ -58,6 +55,13 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - run:
+          name: Skip build if only docs changed
+          command: |
+            if git diff --quiet HEAD~1 HEAD -- '*.md'; then
+              echo "Docs-only change detected, skipping build."
+              circleci step halt
+            fi
       - setup_remote_docker
       - run:
           name: Build Docker Image
@@ -119,11 +123,6 @@ workflows:
             branches:
               only:
                 - main
-          # docs-only skips
-          # put this at the same level as branches
-          paths:
-            ignore:
-              - "**/*.md"
       - push-ecr:
           requires:
             - build
@@ -131,6 +130,3 @@ workflows:
             branches:
               only:
                 - main
-          paths:
-            ignore:
-              - "**/*.md"
