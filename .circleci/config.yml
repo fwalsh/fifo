@@ -15,6 +15,10 @@ jobs:
   test:
     executor: go-executor
     environment:
+      DB_HOST: localhost
+      DB_USER: items_user
+      DB_PASS: items_pass
+      DB_NAME: items_db
       DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
     steps:
@@ -57,16 +61,6 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Skip build for docs-only changes
-          command: |
-            if git diff --name-only $CIRCLE_SHA1 $CIRCLE_BRANCH | grep -qvE 'README.md|docs/'; then
-              echo "✅ Code changes detected, proceeding with build..."
-            else
-              echo -e "\033[33m⚠️ Docs-only change detected, skipping build.\033[0m"
-              echo "::notice::Skipping build — only documentation files changed"
-              circleci step halt
-            fi
-      - run:
           name: Build Docker Image
           command: docker build -t fifo-app:latest .
       - run:
@@ -83,62 +77,43 @@ jobs:
       - checkout
       - setup_remote_docker
       - run:
-          name: Assume Role and Push Image to ECR
+          name: Assume IAM Role with OIDC and Push to ECR
           command: |
             set -euo pipefail
+            : "${AWS_REGION:=us-west-2}"
+            : "${AWS_ROLE_ARN:?AWS_ROLE_ARN must be set in CircleCI project env vars}"
 
-            # Assume role with OIDC
             echo "$CIRCLE_OIDC_TOKEN_V2" > /tmp/oidc-token
             export AWS_WEB_IDENTITY_TOKEN_FILE=/tmp/oidc-token
-            export AWS_ROLE_ARN=$AWS_ROLE_ARN
-            export AWS_REGION=${AWS_REGION:-us-west-2}
+            export AWS_ROLE_ARN
+            export AWS_REGION
 
-            echo "🔑 Assuming role: $AWS_ROLE_ARN in region $AWS_REGION"
+            # Verify identity
             aws sts get-caller-identity
 
-            # Setup ECR info
             ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
             REPO_NAME=fifo-app
             ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
             # Authenticate Docker to ECR
-            aws ecr get-login-password --region $AWS_REGION | \
-              docker login --username AWS --password-stdin $ECR_REGISTRY
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
             # Ensure repo exists
-            aws ecr describe-repositories \
-              --repository-names $REPO_NAME \
-              --region $AWS_REGION >/dev/null 2>&1 || \
-              aws ecr create-repository \
-                --repository-name $REPO_NAME \
-                --region $AWS_REGION
+            aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
+              aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
 
-            # Build and push Docker image
+            # Build and push image
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
-
 
 workflows:
   version: 2
   build-test-and-push:
     jobs:
-      # Run tests on ALL branches
       - test
-
-      # Only build Docker images on main
       - build:
           requires:
             - test
-          filters:
-            branches:
-              only: main
-
-      # Only push to ECR on main
       - push-ecr:
           requires:
             - build
-          filters:
-            branches:
-              only: main
-
-
