@@ -15,10 +15,6 @@ jobs:
   test:
     executor: go-executor
     environment:
-      DB_HOST: localhost
-      DB_USER: items_user
-      DB_PASS: items_pass
-      DB_NAME: items_db
       DB_MAX_RETRIES: 5
       DB_RETRY_DELAY: 2
     steps:
@@ -59,6 +55,15 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - run:
+          name: Skip build if only docs changed
+          command: |
+            if git diff --name-only $CIRCLE_SHA1^ $CIRCLE_SHA1 | grep -qvE '\.md$'; then
+              echo "Non-doc changes detected, building..."
+            else
+              echo "Docs-only change detected, skipping build."
+              circleci step halt
+            fi
       - setup_remote_docker
       - run:
           name: Build Docker Image
@@ -75,9 +80,23 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - run:
+          name: Skip push if only docs changed
+          command: |
+            if git diff --name-only $CIRCLE_SHA1^ $CIRCLE_SHA1 | grep -qvE '\.md$'; then
+              echo "Non-doc changes detected, pushing..."
+            else
+              echo "Docs-only change detected, skipping push."
+              circleci step halt
+            fi
       - setup_remote_docker
       - run:
-          name: Assume IAM Role with OIDC and Push to ECR
+          name: Debug OIDC Token Claims
+          command: |
+            echo "Raw token payload:"
+            echo "$CIRCLE_OIDC_TOKEN_V2" | cut -d. -f2 | base64 -d || true
+      - run:
+          name: Assume AWS role via OIDC and push image to ECR
           command: |
             set -euo pipefail
             : "${AWS_REGION:=us-west-2}"
@@ -95,14 +114,11 @@ jobs:
             REPO_NAME=fifo-app
             ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-            # Authenticate Docker to ECR
             aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            # Ensure repo exists
             aws ecr describe-repositories --repository-names "$REPO_NAME" --region "$AWS_REGION" >/dev/null 2>&1 || \
               aws ecr create-repository --repository-name "$REPO_NAME" --region "$AWS_REGION"
 
-            # Build and push image
             docker build -t "${ECR_REGISTRY}/${REPO_NAME}:latest" .
             docker push "${ECR_REGISTRY}/${REPO_NAME}:latest"
 
@@ -110,22 +126,16 @@ workflows:
   version: 2
   build-test-and-push:
     jobs:
-      - test   # runs on all branches
+      - test
       - build:
           requires:
             - test
           filters:
             branches:
               only: main
-            paths:
-              ignore:
-                - "**/*.md"
       - push-ecr:
           requires:
             - build
           filters:
             branches:
               only: main
-            paths:
-              ignore:
-                - "**/*.md"
