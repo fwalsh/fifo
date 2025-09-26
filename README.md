@@ -6,7 +6,7 @@ In this case, it’s also the name of a simple **Items API** written in Go — a
 
 The service exposes a few endpoints:
 
-- `GET /` → Friendly landing page (HTML with styled welcome)  
+- `GET /` → Landing page (HTML with styled welcome)  
 - `GET /health` → Health check (JSON: `{"status":"ok"}`)  
 - `GET /items` → List stored items (JSON array)  
 - `POST /items` → Add a new item (accepts JSON or form input)  
@@ -18,7 +18,7 @@ Behind the scenes:
 - **Docker** for containerization  
 - **CircleCI** to test, build, and publish images to AWS ECR using **OIDC** (no static creds)  
 
-It’s both a **reference pipeline** and a fun way to show how everything maps together end-to-end.
+It’s both a **reference pipeline** and a way to show how everything maps together end-to-end.
 
 ---
 
