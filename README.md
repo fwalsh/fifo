@@ -1,6 +1,6 @@
-# 🌀 fifo – Items API with Go, Postgres, Docker & CircleCI
+#  fifo – Items API with Go, Postgres, Docker & CircleCI
 
-**fifo** is a nickname for Fiona (me! 👋).  
+**fifo** is a nickname for Fiona (me!).  
 
 In this case, it’s also the name of a simple **Items API** written in Go — a simple but complete reference app designed to showcase a modern CI/CD pipeline.  
 
@@ -23,7 +23,7 @@ It’s both a **reference pipeline** and a way to show how everything maps toget
 ---
 
 
-## 🌀 Architecture
+##  Architecture
 
 ```text
              ┌─────────────┐
@@ -49,7 +49,8 @@ It’s both a **reference pipeline** and a way to show how everything maps toget
    └───────────────┘   └───────────────┘   └───────────────┘
                            (only on main)
 
-🚀 Running Locally
+```
+ Running Locally
 
 Make sure you have Docker and docker-compose installed.
 
@@ -68,7 +69,9 @@ Once the services are running:
 
 # Health check
 curl http://localhost:8080/health
+```text
 # -> {"status":"ok"}
+```
 
 
 # Create an item (JSON)
@@ -79,16 +82,17 @@ curl -X POST http://localhost:8080/items \
 
 # List items
 curl http://localhost:8080/items
+```text
 # -> [{"id":1,"name":"peach","created_at":"..."}]
-
+```
 
 Or open your browser and visit:
-👉 http://localhost:8080/
+ http://localhost:8080/
 
 You’ll see a simple landing page, and you can interact with the API from there.
 
 
-🔄 CI/CD Pipeline
+ CI/CD Pipeline
 
 The CircleCI config (.circleci/config.yml) includes:
 
@@ -102,7 +106,7 @@ Push job:
 On merge to main, uses OIDC to authenticate to AWS and push the image to ECR.
 
 
-🔀 Branch-based conditions:
+ Branch-based conditions:
 
 Tests run on all branches (PRs, feature branches, main).
 
@@ -110,22 +114,22 @@ Docker build and push to AWS ECR run only on main.
 This ensures quick feedback everywhere while limiting heavier jobs to production-ready changes.
 
 
-🐾 Features & Optimizations
+ Features & Optimizations
 
-🐘 Postgres sidecar for realistic testing
+ Postgres sidecar for realistic testing
 
-🐳 Multi-stage Docker builds for lean images
+ Multi-stage Docker builds for lean images
 
-🔒 OIDC → AWS: no static credentials
+ OIDC → AWS: no static credentials
 
-✂️ Skips unnecessary builds for docs-only changes
+ Skips unnecessary builds for docs-only changes
 
-📦 Publishes artifacts to both CircleCI + AWS ECR
+ Publishes artifacts to both CircleCI + AWS ECR
 
-🌱 Automatic migrations ensure schema is ready (via `migrate` sidecar)
+ Automatic migrations ensure schema is ready (via `migrate` sidecar)
 
 
-🔮 Future Improvements
+ Future Improvements
 
 Lock IAM trust to main branch only
 
